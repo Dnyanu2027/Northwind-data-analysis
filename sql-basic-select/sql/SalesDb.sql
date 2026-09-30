@@ -178,3 +178,57 @@ SELECT CategoryID, CategoryName
 FROM Categories
 WHERE CategoryID IN (1, 3, 5);
 
+-- SQL Aggregation Basics: 10 queries using COUNT, SUM, AVG, MIN, MAX (MySQL )
+
+-- 1. Total number of products (COUNT)
+SELECT COUNT(*) AS total_products
+FROM Products;
+
+-- 2. Number of products per category (COUNT + GROUP BY)
+SELECT CategoryID, COUNT(*) AS product_count
+FROM Products
+GROUP BY CategoryID
+ORDER BY CategoryID;
+
+-- 3. Total quantity ordered across all order lines (SUM)
+SELECT SUM(Quantity) AS total_quantity
+FROM OrderDetails;
+
+-- 4. Total quantity ordered per order (SUM + GROUP BY)
+SELECT OrderID, SUM(Quantity) AS total_quantity
+FROM OrderDetails
+GROUP BY OrderID
+ORDER BY total_quantity DESC;
+
+-- 5. Average price of all products (AVG)
+SELECT AVG(Price) AS avg_price
+FROM Products;
+
+-- 6. Average product price per category (AVG + GROUP BY)
+SELECT CategoryID, AVG(Price) AS avg_price
+FROM Products
+GROUP BY CategoryID
+ORDER BY avg_price DESC;
+
+-- 7. Cheapest and priciest product overall (MIN, MAX)
+SELECT MIN(Price) AS min_price, MAX(Price) AS max_price
+FROM Products;
+
+-- 8. Price range per category (MIN, MAX + GROUP BY)
+SELECT CategoryID, MIN(Price) AS min_price, MAX(Price) AS max_price
+FROM Products
+GROUP BY CategoryID;
+
+-- 9. Number of orders per customer (COUNT + GROUP BY)
+SELECT CustomerID, COUNT(*) AS order_count
+FROM Orders
+GROUP BY CustomerID
+ORDER BY order_count DESC;
+
+-- 10. Suppliers with more than 2 products (COUNT, AVG + HAVING)
+SELECT SupplierID, COUNT(*) AS product_count, AVG(Price) AS avg_price
+FROM Products
+GROUP BY SupplierID
+HAVING COUNT(*) > 2
+ORDER BY product_count DESC;
+
