@@ -232,3 +232,68 @@ GROUP BY SupplierID
 HAVING COUNT(*) > 2
 ORDER BY product_count DESC;
 
+-- SQL Joins Practice: 10 queries using INNER JOIN, LEFT JOIN, multi-table joins (MySQL )
+
+-- 1. Orders with customer name (INNER JOIN)
+SELECT o.OrderID, c.CustomerName, o.OrderDate
+FROM Orders o
+INNER JOIN Customers c ON o.CustomerID = c.CustomerID
+ORDER BY o.OrderDate;
+
+-- 2. Products with category name (INNER JOIN)
+SELECT p.ProductName, cat.CategoryName, p.Price
+FROM Products p
+INNER JOIN Categories cat ON p.CategoryID = cat.CategoryID
+ORDER BY cat.CategoryName;
+
+-- 3. Products with supplier name (INNER JOIN)
+SELECT p.ProductName, s.SupplierName, p.Price
+FROM Products p
+INNER JOIN Suppliers s ON p.SupplierID = s.SupplierID
+ORDER BY s.SupplierName;
+
+-- 4. Order lines with product names (INNER JOIN)
+SELECT od.OrderID, p.ProductName, od.Quantity
+FROM OrderDetails od
+INNER JOIN Products p ON od.ProductID = p.ProductID
+ORDER BY od.OrderID;
+
+-- 5. Orders with shipper name (INNER JOIN)
+SELECT o.OrderID, o.OrderDate, s.CompanyName AS Shipper
+FROM Orders o
+INNER JOIN Shippers s ON o.ShipperID = s.ShipperID
+ORDER BY o.OrderDate;
+
+-- 6. Every customer, with orders if any (LEFT JOIN)
+SELECT c.CustomerName, o.OrderID, o.OrderDate
+FROM Customers c
+LEFT JOIN Orders o ON c.CustomerID = o.CustomerID
+ORDER BY c.CustomerName;
+
+-- 7. Customers with no matching orders (LEFT JOIN + IS NULL)
+SELECT c.CustomerID, c.CustomerName
+FROM Customers c
+LEFT JOIN Orders o ON c.CustomerID = o.CustomerID
+WHERE o.OrderID IS NULL;
+
+-- 8. Every product, with order quantities if ordered (LEFT JOIN)
+SELECT p.ProductName, od.OrderID, od.Quantity
+FROM Products p
+LEFT JOIN OrderDetails od ON p.ProductID = od.ProductID
+ORDER BY p.ProductName;
+
+-- 9. Order lines with customer and product names (3-table JOIN)
+SELECT o.OrderID, c.CustomerName, p.ProductName, od.Quantity
+FROM Orders o
+INNER JOIN Customers c ON o.CustomerID = c.CustomerID
+INNER JOIN OrderDetails od ON o.OrderID = od.OrderID
+INNER JOIN Products p ON od.ProductID = p.ProductID
+ORDER BY o.OrderID;
+
+-- 10. Total revenue per product (JOIN + GROUP BY)
+SELECT p.ProductName, SUM(od.Quantity * p.Price) AS total_revenue
+FROM OrderDetails od
+INNER JOIN Products p ON od.ProductID = p.ProductID
+GROUP BY p.ProductName
+ORDER BY total_revenue DESC;
+
