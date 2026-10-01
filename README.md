@@ -2,7 +2,8 @@
 
 Ten SQL queries practicing INNER JOIN, LEFT JOIN, and multi-table joins on a Northwind-style dataset, with cleaned data and a PDF report that documents how a real data-quality gap affects join results.
 
-**Objective:** combine tables with JOINs and understand INNER vs LEFT JOIN. **Tools:** MySQL, PostgreSQL.
+**Objective:** combine tables with JOINs and understand INNER vs LEFT JOIN. 
+**Tools:** MySQL.
 
 ## Repository contents
 
