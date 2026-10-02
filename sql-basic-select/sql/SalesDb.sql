@@ -297,3 +297,154 @@ INNER JOIN Products p ON od.ProductID = p.ProductID
 GROUP BY p.ProductName
 ORDER BY total_revenue DESC;
 
+-- Project 5: Subqueries & Window Functions - 20 queries (MySQL / PostgreSQL compatible)
+
+-- Queries 1-10: Subqueries | Queries 11-20: Window Functions
+
+-- 1. Products priced above the overall average (scalar subquery)
+SELECT ProductName, Price
+FROM Products
+WHERE Price > (SELECT AVG(Price) FROM Products)
+ORDER BY Price DESC;
+
+-- 2. Products priced above their own category's average (correlated subquery)
+SELECT p.ProductName, p.CategoryID, p.Price
+FROM Products p
+WHERE p.Price > (
+  SELECT AVG(p2.Price) FROM Products p2 WHERE p2.CategoryID = p.CategoryID
+)
+ORDER BY p.CategoryID;
+
+-- 3. Most expensive product in each category (correlated subquery)
+SELECT p.ProductName, p.CategoryID, p.Price
+FROM Products p
+WHERE p.Price = (
+  SELECT MAX(p2.Price) FROM Products p2 WHERE p2.CategoryID = p.CategoryID
+)
+ORDER BY p.CategoryID;
+
+-- 4. Categories whose average price beats the overall average (subquery in WHERE, on a derived table)
+SELECT CategoryID, AVG(Price) AS avg_price
+FROM Products
+GROUP BY CategoryID
+HAVING AVG(Price) > (SELECT AVG(Price) FROM Products)
+ORDER BY avg_price DESC;
+
+-- 5. Suppliers who supply more products than the average supplier (subquery)
+SELECT SupplierID, COUNT(*) AS product_count
+FROM Products
+GROUP BY SupplierID
+HAVING COUNT(*) > (
+  SELECT AVG(cnt) FROM (
+    SELECT COUNT(*) AS cnt FROM Products GROUP BY SupplierID
+  )
+)
+ORDER BY product_count DESC;
+
+-- 6. Products that have never appeared in an order line (NOT IN subquery)
+SELECT ProductID, ProductName
+FROM Products
+WHERE ProductID NOT IN (SELECT ProductID FROM OrderDetails)
+ORDER BY ProductID;
+
+-- 7. Products that have appeared in at least one order line (IN subquery)
+SELECT ProductID, ProductName
+FROM Products
+WHERE ProductID IN (SELECT ProductID FROM OrderDetails)
+ORDER BY ProductID;
+
+-- 8. Customers who placed more orders than the average customer (subquery)
+SELECT CustomerID, COUNT(*) AS order_count
+FROM Orders
+GROUP BY CustomerID
+HAVING COUNT(*) > (
+  SELECT AVG(cnt) FROM (
+    SELECT COUNT(*) AS cnt FROM Orders GROUP BY CustomerID
+  )
+)
+ORDER BY order_count DESC;
+
+-- 9. Second most expensive product (subquery with nested MAX)
+SELECT ProductName, Price
+FROM Products
+WHERE Price = (
+  SELECT MAX(Price) FROM Products
+  WHERE Price < (SELECT MAX(Price) FROM Products)
+);
+
+-- 10. Orders whose total line quantity beats the average order's total quantity (subquery in FROM)
+SELECT OrderID, total_qty
+FROM (
+  SELECT OrderID, SUM(Quantity) AS total_qty FROM OrderDetails GROUP BY OrderID
+) t
+WHERE total_qty > (
+  SELECT AVG(total_qty) FROM (
+    SELECT SUM(Quantity) AS total_qty FROM OrderDetails GROUP BY OrderID
+  )
+)
+ORDER BY total_qty DESC;
+
+-- 11. Rank all products by price, highest first (RANK)
+SELECT ProductName, Price,
+  RANK() OVER (ORDER BY Price DESC) AS price_rank
+FROM Products
+ORDER BY price_rank;
+
+-- 12. Rank products within each category by price (ROW_NUMBER + PARTITION BY)
+SELECT ProductName, CategoryID, Price,
+  ROW_NUMBER() OVER (PARTITION BY CategoryID ORDER BY Price DESC) AS rank_in_category
+FROM Products
+ORDER BY CategoryID, rank_in_category;
+
+-- 13. Dense-rank categories by how many products they contain (DENSE_RANK)
+SELECT CategoryID, COUNT(*) AS product_count,
+  DENSE_RANK() OVER (ORDER BY COUNT(*) DESC) AS count_rank
+FROM Products
+GROUP BY CategoryID
+ORDER BY count_rank;
+
+-- 14. Running total of quantity across all order lines (SUM OVER, ordered)
+SELECT OrderDetailID, OrderID, Quantity,
+  SUM(Quantity) OVER (ORDER BY OrderDetailID) AS running_total
+FROM OrderDetails
+ORDER BY OrderDetailID;
+
+-- 15. Each product's price next to its category average (AVG OVER, PARTITION BY)
+SELECT ProductName, CategoryID, Price,
+  ROUND(AVG(Price) OVER (PARTITION BY CategoryID), 2) AS category_avg_price
+FROM Products
+ORDER BY CategoryID, Price DESC;
+
+-- 16. Each product's price compared to the next cheaper product (LAG)
+SELECT ProductName, Price,
+  LAG(Price) OVER (ORDER BY Price DESC) AS previous_price,
+  Price - LAG(Price) OVER (ORDER BY Price DESC) AS price_gap
+FROM Products
+ORDER BY Price DESC;
+
+-- 17. Each product's price compared to the next pricier product (LEAD)
+SELECT ProductName, Price,
+  LEAD(Price) OVER (ORDER BY Price DESC) AS next_price
+FROM Products
+ORDER BY Price DESC;
+
+-- 18. Split products into 4 price quartiles (NTILE)
+SELECT ProductName, Price,
+  NTILE(4) OVER (ORDER BY Price) AS price_quartile
+FROM Products
+ORDER BY price_quartile, Price;
+
+-- 19. Total quantity per order shown on every line, with each line's share (SUM OVER PARTITION BY)
+SELECT OrderID, OrderDetailID, Quantity,
+  SUM(Quantity) OVER (PARTITION BY OrderID) AS order_total_qty,
+  ROUND(100.0 * Quantity / SUM(Quantity) OVER (PARTITION BY OrderID), 1) AS pct_of_order
+FROM OrderDetails
+ORDER BY OrderID, OrderDetailID;
+
+-- 20. Cheapest and priciest product name shown on every row per category (FIRST_VALUE, LAST_VALUE)
+SELECT ProductName, CategoryID, Price,
+  FIRST_VALUE(ProductName) OVER (PARTITION BY CategoryID ORDER BY Price ASC) AS cheapest_in_category,
+  FIRST_VALUE(ProductName) OVER (PARTITION BY CategoryID ORDER BY Price DESC) AS priciest_in_category
+FROM Products
+ORDER BY CategoryID, Price;
+
