@@ -1,31 +1,43 @@
-# SQL Joins Practice
+# SQL Subqueries & Window Functions
 
-Ten SQL queries practicing INNER JOIN, LEFT JOIN, and multi-table joins on a Northwind-style dataset, with cleaned data and a PDF report that documents how a real data-quality gap affects join results.
+Twenty SQL queries — 10 subqueries and 10 window functions — on a Northwind-style dataset, with cleaned data and a PDF report of every output.
 
-**Objective:** combine tables with JOINs and understand INNER vs LEFT JOIN. 
-**Tools:** MySQL.
+**Objective:** practice correlated/non-correlated subqueries, derived tables, and window functions (RANK, ROW_NUMBER, DENSE_RANK, LAG, LEAD, NTILE, running totals). **Tools:** MySQL, PostgreSQL.
 
 ## Repository contents
 
 | Path | What it is |
 |---|---|
 | `data/` | 7 cleaned CSV files (Categories, Customers, Products, Suppliers, Shippers, Orders, OrderDetails) |
-| `sql/schema.sql` | `CREATE TABLE` statements (no foreign keys — see below) |
-| `sql/queries.sql` | The 10 queries |
-| `reports/SQL_Joins_Report.pdf` | Report with every query, its output, and row-count notes |
+| `sql/schema.sql` | `CREATE TABLE` statements |
+| `sql/queries.sql` | All 20 queries |
+| `reports/SQL_Subqueries_Windows_Report.pdf` | Report with every query, its SQL, and its real output |
 
-## Queries covered
+## Part 1 — Subqueries (1–10)
 
-1. Orders with customer name (`INNER JOIN`)
-2. Products with category name (`INNER JOIN`)
-3. Products with supplier name (`INNER JOIN`)
-4. Order lines with product names (`INNER JOIN`)
-5. Orders with shipper name (`INNER JOIN`)
-6. Every customer, with orders if any (`LEFT JOIN`)
-7. Customers with no matching orders (`LEFT JOIN` + `IS NULL`)
-8. Every product, with order quantities if ordered (`LEFT JOIN`)
-9. Order lines with customer and product names (3-table `JOIN`)
-10. Total revenue per product (`JOIN` + `GROUP BY`)
+1. Products priced above the overall average (scalar subquery)
+2. Products priced above their own category's average (correlated subquery)
+3. Most expensive product in each category (correlated subquery)
+4. Categories whose average price beats the overall average
+5. Suppliers who supply more products than the average supplier
+6. Products never appearing in an order line (`NOT IN`)
+7. Products appearing in at least one order line (`IN`)
+8. Customers who placed more orders than average (returns 0 rows — see Data notes)
+9. Second most expensive product (nested `MAX`)
+10. Orders whose total quantity beats the average order (subquery in `FROM`, a derived table)
+
+## Part 2 — Window Functions (11–20)
+
+11. Rank all products by price (`RANK`)
+12. Rank products within each category (`ROW_NUMBER` + `PARTITION BY`)
+13. Dense-rank categories by product count (`DENSE_RANK`)
+14. Running total of quantity across order lines (`SUM() OVER`, ordered)
+15. Each product's price next to its category average (`AVG() OVER`, `PARTITION BY`)
+16. Each product vs. the next cheaper product (`LAG`)
+17. Each product vs. the next pricier product (`LEAD`)
+18. Products split into 4 price quartiles (`NTILE`)
+19. Total quantity per order shown on every line, with each line's share (`SUM() OVER PARTITION BY`)
+20. Cheapest/priciest product name per category, shown on every row (`FIRST_VALUE`)
 
 ## How to run
 
@@ -34,27 +46,28 @@ Ten SQL queries practicing INNER JOIN, LEFT JOIN, and multi-table joins on a Nor
    - **MySQL Workbench:** right-click the schema, then *Table Data Import Wizard*.
 3. Run the queries in `sql/queries.sql`.
 
-## Data quality finding
+## What I noticed
 
-Table row counts: Customers 23, Orders 21, Products 25, OrderDetails 26.
+**Subqueries**
+- A *correlated* subquery (queries 2, 3) re-evaluates once per outer row, referencing a column from the outer query; a plain subquery runs once.
+- A subquery in `FROM` (query 10) is a derived table — it must be aliased and can be filtered, grouped or joined like a real table.
+- `NOT IN` with a subquery (query 6) silently returns zero rows if the subquery can produce a NULL — worth checking for NULLs before relying on it.
 
-Checking the foreign keys: **only 3 of 21 orders** have a `CustomerID` that matches a row in Customers, and **only 9 of 26 order lines** have a `ProductID` that matches a row in Products. This means:
+**Window functions**
+- Unlike `GROUP BY`, a window function keeps every row — `PARTITION BY` groups the calculation without collapsing rows.
+- `RANK()` leaves gaps after ties (1, 2, 2, 4); `DENSE_RANK()` doesn't (1, 2, 2, 3); `ROW_NUMBER()` never ties.
+- `LAG`/`LEAD` look at a neighboring row without a self-join.
+- `FIRST_VALUE` needs its own `ORDER BY` inside the window — it doesn't reuse the outer query's `ORDER BY`.
 
-- Query 1 (Orders ⋈ Customers) keeps only 3 of 21 orders.
-- Query 4 (OrderDetails ⋈ Products) keeps only 9 of 26 order lines.
-- Query 7 shows 20 of 23 customers as "no orders" — mostly a side effect of the ID mismatch, not necessarily true zero-order customers.
-- Query 9, which chains three INNER JOINs, keeps only 1 row, since it needs every join in the chain to find a match.
+## Data notes
 
-No foreign keys are declared in `schema.sql` because of this gap. The PDF report flags every affected query with a note explaining the row count.
+Query 8 returns 0 rows: all 21 orders in this dataset belong to 21 different customers, so no customer has more than one order and none is "above average." This is a correct result, not an error.
 
-## What I noticed testing each join type
-
-- `INNER JOIN` drops unmatched rows silently — no error, so checking row counts before/after a join matters.
-- `LEFT JOIN` keeps every row from the left table, filling unmatched right-table columns with NULL.
-- `WHERE right_table.column IS NULL` after a `LEFT JOIN` is the standard way to find unmatched rows.
-- Chaining INNER JOINs multiplies the mismatch problem — every join in the chain must find a match for a row to survive.
+As in earlier projects: 18 of 21 orders reference a `CustomerID` not in Customers, and 17 of 26 order lines reference a `ProductID` not in Products. Queries here mostly work within single tables or compare a table to its own aggregate, so this affects fewer queries than in the joins project — but it's why no foreign keys are declared in `schema.sql`.
 
 ## Interview questions
 
-- **INNER JOIN vs LEFT JOIN?** INNER JOIN returns only rows with a match in both tables. LEFT JOIN returns every row from the left table, with NULLs filling the right table's columns where there's no match.
-- **Why use IS NULL after a LEFT JOIN?** Unmatched left-table rows get NULL in every right-table column after a LEFT JOIN, so filtering on `IS NULL` isolates exactly those unmatched rows.
+- **What is a subquery?** A query nested inside another, used to supply a value, a list of values, or a derived table the outer query filters, joins against, or selects from.
+- **Subquery vs JOIN — when to use which?** A JOIN combines columns from two tables into one row and is usually clearer when you need data from both tables in the output. A subquery fits better when you only need to filter or compare against a value from another table, without pulling its columns into the result.
+- **What is a window function?** A calculation across a set of related rows (a "window," defined with `OVER()`) that returns a value for every row, instead of collapsing rows into one summary row the way `GROUP BY` does.
+- **RANK vs DENSE_RANK vs ROW_NUMBER?** `RANK` skips numbers after a tie, `DENSE_RANK` doesn't, and `ROW_NUMBER` assigns a unique number to every row regardless of ties.
